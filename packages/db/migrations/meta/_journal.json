@@ -15,6 +15,13 @@
       "when": 1783368454821,
       "tag": "0001_loose_blonde_phantom",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783370676818,
+      "tag": "0002_legal_thor_girl",
+      "breakpoints": true
     }
   ]
 }

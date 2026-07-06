@@ -1,7 +1,13 @@
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
+import { ulid } from "ulid";
 
 import * as schema from "./schema";
+
+/** Id factory — the db package owns identifier format (ULID). */
+export function newId(): string {
+  return ulid();
+}
 
 /**
  * Lazily-created singleton so importing the package never requires a

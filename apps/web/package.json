@@ -10,9 +10,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@auteur/api": "workspace:*",
     "@auteur/contracts": "workspace:*",
     "@auteur/db": "workspace:*",
     "@clerk/nextjs": "^7.5.13",
+    "@trpc/client": "^11",
+    "@trpc/server": "^11",
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4"

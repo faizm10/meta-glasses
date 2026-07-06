@@ -1,12 +1,7 @@
 import { eq } from "drizzle-orm";
 
-import { db } from "./client";
-import { tasteProfiles, users, type User } from "./schema";
-
-/**
- * Query helpers — the only place SQL is composed (ARCHITECTURE.md §6).
- * App code calls these; it never builds queries inline.
- */
+import { db } from "../client";
+import { tasteProfiles, users, type User } from "../schema";
 
 export async function findUserByClerkId(clerkId: string): Promise<User | undefined> {
   return db().query.users.findFirst({ where: eq(users.clerkId, clerkId) });

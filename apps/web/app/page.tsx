@@ -1,6 +1,9 @@
 import { UserButton } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
 
+import { countDailies } from "@auteur/db";
+
+import { IngestZone } from "@/features/ingest/ingest-zone";
 import { ensureUser } from "@/lib/ensure-user";
 
 /**
@@ -12,6 +15,7 @@ export default async function Marquee() {
   const user = await ensureUser();
   if (!user.onboardedAt) redirect("/onboarding");
   const credit = user.displayName ? `directed by ${user.displayName}` : "directed by you";
+  const dailies = await countDailies(user.id);
 
   return (
     <main className="flex min-h-screen flex-col px-6 py-5">
@@ -24,16 +28,22 @@ export default async function Marquee() {
       </header>
 
       <section className="flex flex-1 flex-col items-center justify-center gap-12">
-        <OpenFrame />
+        <OpenFrame dailies={dailies} films={0} />
         <div className="flex flex-col items-center gap-4 text-center">
           <h1 className="font-display text-4xl font-normal tracking-tight text-bone sm:text-5xl">
-            Your first film is waiting outside.
+            {dailies === 0
+              ? "Your first film is waiting outside."
+              : "Your dailies are in the archive."}
           </h1>
           <p className="timecode text-xs text-bone/35">
-            dailies develop here after you shoot
+            {dailies === 0
+              ? "shoot, then drop your footage anywhere here"
+              : "scene detection arrives with the next phase"}
           </p>
         </div>
       </section>
+
+      <IngestZone />
     </main>
   );
 }
@@ -42,7 +52,7 @@ export default async function Marquee() {
  * The brand mark at canvas scale: four corner ticks of a 2.39:1 frame,
  * a point of light at the golden-ratio intersection (DESIGN.md §3).
  */
-function OpenFrame() {
+function OpenFrame({ dailies, films }: { dailies: number; films: number }) {
   const w = 478;
   const h = 200;
   const tick = 28;
@@ -69,10 +79,10 @@ function OpenFrame() {
         />
         <g className="timecode" fill="var(--bone)" fillOpacity="0.35" fontSize="10">
           <text x={tick + 6} y={h - tick - 4}>
-            dailies: 0
+            dailies: {dailies}
           </text>
           <text x={w - tick - 6} y={h - tick - 4} textAnchor="end">
-            films: 0
+            films: {films}
           </text>
         </g>
       </svg>
