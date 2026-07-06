@@ -1,0 +1,20 @@
+{
+  "name": "auteur",
+  "private": true,
+  "packageManager": "pnpm@10.14.0",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "typecheck": "turbo typecheck",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "db:generate": "pnpm --filter @auteur/db generate",
+    "db:migrate": "pnpm --filter @auteur/db migrate"
+  },
+  "devDependencies": {
+    "turbo": "^2"
+  }
+}

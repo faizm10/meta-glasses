@@ -1,0 +1,26 @@
+{
+  "name": "@auteur/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1",
+    "drizzle-orm": "^0.44",
+    "ulid": "^3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "drizzle-kit": "^0.31",
+    "typescript": "^5"
+  }
+}

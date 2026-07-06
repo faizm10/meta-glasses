@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+/* House lights — DESIGN.md §6. Screening-room dark, always. */
+:root {
+  --screen-0: #0b0b0c;
+  --screen-1: #141416;
+  --screen-2: #1d1d20;
+  --bone: #f2efe9;
+  --tungsten: #e6a550;
+  --signal-print: #5dc9a5;
+  --signal-cut: #e24b4a;
+}
+
+@theme inline {
+  --color-screen-0: var(--screen-0);
+  --color-screen-1: var(--screen-1);
+  --color-screen-2: var(--screen-2);
+  --color-bone: var(--bone);
+  --color-tungsten: var(--tungsten);
+  --color-print: var(--signal-print);
+  --color-cut: var(--signal-cut);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-app);
+  --font-mono: var(--font-camera);
+}
+
+body {
+  background: var(--screen-0);
+  color: var(--bone);
+  font-family: var(--font-app), sans-serif;
+}
+
+/* Camera-voice metadata: mono, tracked wide, always uppercase. */
+.timecode {
+  font-family: var(--font-camera), monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
