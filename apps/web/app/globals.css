@@ -36,3 +36,19 @@ body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+/* The exposure fade — elements enter like film exposing (DESIGN.md §9). */
+@keyframes expose {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.expose {
+  animation: expose 700ms cubic-bezier(0.32, 0, 0.16, 1) both;
+}

@@ -1,15 +1,26 @@
+import { UserButton } from "@clerk/nextjs";
+import { redirect } from "next/navigation";
+
+import { ensureUser } from "@/lib/ensure-user";
+
 /**
- * The Marquee — home. Phase 0 ships its empty state (DESIGN.md §27):
- * the Open Frame with camera readouts, and one serif line. The readouts
- * go live in Phase 2 (ingest) and the frame is replaced by tonight's
+ * The Marquee — home. Phase 1 state: authenticated, empty (DESIGN.md §27).
+ * The readouts go live in Phase 2 (ingest); the frame becomes tonight's
  * poster once the first film develops (Phase 5).
  */
-export default function Marquee() {
+export default async function Marquee() {
+  const user = await ensureUser();
+  if (!user.onboardedAt) redirect("/onboarding");
+  const credit = user.displayName ? `directed by ${user.displayName}` : "directed by you";
+
   return (
     <main className="flex min-h-screen flex-col px-6 py-5">
       <header className="flex items-center justify-between">
         <span className="timecode text-xs text-bone/40">auteur</span>
-        <span className="timecode text-xs text-bone/40">awaiting first sync</span>
+        <div className="flex items-center gap-4">
+          <span className="timecode text-xs text-bone/40">{credit}</span>
+          <UserButton />
+        </div>
       </header>
 
       <section className="flex flex-1 flex-col items-center justify-center gap-12">

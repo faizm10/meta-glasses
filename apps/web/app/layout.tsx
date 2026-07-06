@@ -1,3 +1,4 @@
+import {ClerkProvider} from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Fraunces, Geist, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
@@ -41,7 +42,24 @@ export default function RootLayout({
       lang="en"
       className={`${displaySerif.variable} ${appSans.variable} ${cameraMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ClerkProvider
+          appearance={{
+            variables: {
+              colorPrimary: "#e6a550",
+              colorPrimaryForeground: "#0b0b0c",
+              colorBackground: "#141416",
+              colorForeground: "#f2efe9",
+              colorMutedForeground: "rgba(242, 239, 233, 0.6)",
+              colorInput: "#1d1d20",
+              colorInputForeground: "#f2efe9",
+              borderRadius: "10px",
+            },
+          }}
+        >
+          {children}
+        </ClerkProvider>
+      </body>
     </html>
   );
 }
