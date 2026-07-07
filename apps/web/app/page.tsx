@@ -1,4 +1,5 @@
 import { UserButton } from "@clerk/nextjs";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { countDailies } from "@auteur/db";
@@ -22,6 +23,12 @@ export default async function Marquee() {
       <header className="flex items-center justify-between">
         <span className="timecode text-xs text-bone/40">auteur</span>
         <div className="flex items-center gap-4">
+          <Link
+            href="/library"
+            className="timecode text-xs text-bone/40 transition-colors hover:text-bone"
+          >
+            library
+          </Link>
           <span className="timecode text-xs text-bone/40">{credit}</span>
           <UserButton />
         </div>

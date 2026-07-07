@@ -1,5 +1,6 @@
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -47,6 +48,18 @@ export async function presignUpload(key: string, mime: string): Promise<string> 
     new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: mime }),
     { expiresIn: 3600 },
   );
+}
+
+/**
+ * Presigned GET for private playback/thumbnails. Media is private by
+ * default (DESIGN.md §25); links die after an hour. R2 serves range
+ * requests, so <video> scrubbing works against these URLs.
+ */
+export async function presignGet(key: string, expiresIn = 3600): Promise<string> {
+  const { client, bucket } = r2();
+  return getSignedUrl(client, new GetObjectCommand({ Bucket: bucket, Key: key }), {
+    expiresIn,
+  });
 }
 
 /** Returns the stored object's size, or null if it doesn't exist. */
