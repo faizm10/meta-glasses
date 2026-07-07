@@ -6,10 +6,13 @@ import {
   findMediaByHash,
   findMediaForUser,
   listRecentMedia,
+  markProcessing,
   newId,
   registerUpload,
   setMediaStatus,
 } from "@auteur/db";
+
+import { pipelineConfigured, submitIngest } from "../pipeline";
 
 import { deleteObject, headObjectBytes, presignUpload, r2Configured } from "../r2";
 import { protectedProcedure, router } from "../trpc";
@@ -100,7 +103,15 @@ export const mediaRouter = router({
         });
       }
       await setMediaStatus(ctx.user.id, row.id, "uploaded");
-      // Phase 3: kick the W1 ingest workflow here.
+
+      if (pipelineConfigured()) {
+        try {
+          const callId = await submitIngest({ ...row, status: "uploaded" });
+          await markProcessing(ctx.user.id, row.id, callId);
+        } catch {
+          // Daily is safe in R2 either way; ingest can be retried later.
+        }
+      }
       return { ok: true as const };
     }),
 

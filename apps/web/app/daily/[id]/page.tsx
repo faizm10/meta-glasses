@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { findMediaForUser } from "@auteur/db";
-import { presignGet } from "@auteur/api";
+import { presignGet, refreshProcessingMedia } from "@auteur/api";
 
 import { ensureUser } from "@/lib/ensure-user";
 
@@ -21,6 +21,7 @@ export default async function DailyPage({
   if (!user.onboardedAt) redirect("/onboarding");
 
   const { id } = await params;
+  await refreshProcessingMedia(user.id);
   const m = await findMediaForUser(user.id, id);
   if (!m || !["uploaded", "processing", "ready"].includes(m.status)) notFound();
 
@@ -71,7 +72,7 @@ export default async function DailyPage({
 
       <footer className="flex justify-center">
         <span className="timecode text-[10px] text-bone/30">
-          {m.fileName ?? "untitled"} · original — proxy playback arrives with the pipeline
+          {m.fileName ?? "untitled"} · {m.proxyKey ? "720p proxy" : "original"}
         </span>
       </footer>
     </main>

@@ -41,6 +41,47 @@ export async function findMediaForUser(
   });
 }
 
+/** Transition into the pipeline: status = processing + the Modal call id. */
+export async function markProcessing(
+  userId: string,
+  mediaId: string,
+  pipelineRef: string,
+): Promise<void> {
+  await db()
+    .update(media)
+    .set({ status: "processing", pipelineRef, updatedAt: new Date() })
+    .where(and(eq(media.id, mediaId), eq(media.userId, userId)));
+}
+
+export async function listProcessingMedia(userId: string): Promise<Media[]> {
+  return db()
+    .select()
+    .from(media)
+    .where(and(eq(media.userId, userId), eq(media.status, "processing")));
+}
+
+/** Write probe results and finish the ingest stage. */
+export async function applyIngestResult(
+  userId: string,
+  mediaId: string,
+  fields: {
+    durationMs: number | null;
+    width: number | null;
+    height: number | null;
+    fps: number | null;
+    codec: string | null;
+    lat: number | null;
+    lng: number | null;
+    proxyKey: string | null;
+    posterKey: string | null;
+  },
+): Promise<void> {
+  await db()
+    .update(media)
+    .set({ ...fields, status: "ready", pipelineRef: null, updatedAt: new Date() })
+    .where(and(eq(media.id, mediaId), eq(media.userId, userId)));
+}
+
 export async function setMediaStatus(
   userId: string,
   mediaId: string,

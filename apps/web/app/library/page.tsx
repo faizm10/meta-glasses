@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { listRecentMedia, type Media } from "@auteur/db";
-import { presignGet, r2Configured } from "@auteur/api";
+import { presignGet, r2Configured, refreshProcessingMedia } from "@auteur/api";
 
 import { ensureUser } from "@/lib/ensure-user";
 
@@ -15,6 +15,7 @@ export default async function LibraryPage() {
   const user = await ensureUser();
   if (!user.onboardedAt) redirect("/onboarding");
 
+  await refreshProcessingMedia(user.id); // collect finished pipeline runs
   const rows = await listRecentMedia(user.id, 200);
   const usable = rows.filter((m) =>
     ["uploaded", "processing", "ready"].includes(m.status),

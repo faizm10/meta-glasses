@@ -69,6 +69,9 @@ importers:
 
   packages/api:
     dependencies:
+      '@auteur/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@auteur/db':
         specifier: workspace:*
         version: link:../db

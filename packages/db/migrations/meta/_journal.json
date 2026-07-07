@@ -22,6 +22,13 @@
       "when": 1783370676818,
       "tag": "0002_legal_thor_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783437382409,
+      "tag": "0003_wealthy_old_lace",
+      "breakpoints": true
     }
   ]
 }

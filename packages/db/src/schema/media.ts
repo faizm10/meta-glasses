@@ -61,6 +61,9 @@ export const media = pgTable(
     lat: doublePrecision("lat"),
     lng: doublePrecision("lng"),
 
+    /** Modal function-call id while status = processing. */
+    pipelineRef: text("pipeline_ref"),
+
     // R2 object keys (content-addressed, immutable).
     originalKey: text("original_key").notNull(),
     proxyKey: text("proxy_key"),

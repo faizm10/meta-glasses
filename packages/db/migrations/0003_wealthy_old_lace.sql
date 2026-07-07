@@ -1,0 +1,1 @@
+ALTER TABLE "media" ADD COLUMN "pipeline_ref" text;
