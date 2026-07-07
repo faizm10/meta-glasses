@@ -124,4 +124,24 @@ export const mediaRouter = router({
   list: protectedProcedure
     .input(z.object({ limit: z.number().int().min(1).max(200).default(50) }).optional())
     .query(({ ctx, input }) => listRecentMedia(ctx.user.id, input?.limit)),
+
+  /**
+   * Cut a daily from the archive — row and every stored object. The
+   * originals are the user's negatives; deleting them must be honest
+   * and total (DESIGN.md §25), so storage goes first: if R2 fails we
+   * keep the row rather than orphan invisible bytes.
+   */
+  remove: protectedProcedure
+    .input(z.object({ mediaId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const row = await findMediaForUser(ctx.user.id, input.mediaId);
+      if (!row) throw new TRPCError({ code: "NOT_FOUND" });
+
+      const keys = [row.originalKey, row.proxyKey, row.posterKey, row.spriteKey].filter(
+        (k): k is string => Boolean(k),
+      );
+      await Promise.all(keys.map((k) => deleteObject(k)));
+      await deleteMediaRow(ctx.user.id, row.id);
+      return { ok: true as const };
+    }),
 });

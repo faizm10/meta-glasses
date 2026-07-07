@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { findMediaForUser } from "@auteur/db";
 import { presignGet, refreshProcessingMedia } from "@auteur/api";
 
+import { DeleteDaily } from "@/features/library/delete-daily";
 import { ensureUser } from "@/lib/ensure-user";
 
 /**
@@ -70,10 +71,11 @@ export default async function DailyPage({
         </div>
       </section>
 
-      <footer className="flex justify-center">
+      <footer className="flex items-center justify-center gap-6">
         <span className="timecode text-[10px] text-bone/30">
           {m.fileName ?? "untitled"} · {m.proxyKey ? "720p proxy" : "original"}
         </span>
+        <DeleteDaily mediaId={m.id} />
       </footer>
     </main>
   );
