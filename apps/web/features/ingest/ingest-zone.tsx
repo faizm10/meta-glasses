@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { resolveMedia } from "@auteur/contracts";
+
 import { uploadDaily, type UploadItem } from "./upload";
 
 /**
@@ -27,7 +29,7 @@ export function IngestZone() {
   const addFiles = useCallback(
     (files: FileList | File[]) => {
       const fresh: UploadItem[] = [...files]
-        .filter((f) => /^(video|image|audio)\//.test(f.type))
+        .filter((f) => resolveMedia(f.name, f.type) !== null)
         .map((file) => ({
           localId: crypto.randomUUID(),
           file,

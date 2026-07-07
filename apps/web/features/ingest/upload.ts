@@ -1,3 +1,5 @@
+import { resolveMedia } from "@auteur/contracts";
+
 import { api } from "@/lib/trpc";
 
 export type UploadPhase =
@@ -37,12 +39,14 @@ async function fingerprint(file: File): Promise<string> {
 function putWithProgress(
   url: string,
   file: File,
+  mime: string,
   onProgress: (fraction: number) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", url);
-    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    // Must match the Content-Type baked into the presigned signature.
+    xhr.setRequestHeader("Content-Type", mime);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(e.loaded / e.total);
     };
@@ -60,13 +64,19 @@ export async function uploadDaily(
   update: (patch: Partial<UploadItem>) => void,
 ): Promise<void> {
   try {
+    const resolved = resolveMedia(item.file.name, item.file.type);
+    if (!resolved) {
+      update({ phase: "error", error: "not a video, photo, or audio file" });
+      return;
+    }
+
     update({ phase: "fingerprinting" });
     const contentHash = await fingerprint(item.file);
 
     update({ phase: "requesting" });
     const begin = await api.media.beginUpload.mutate({
       fileName: item.file.name,
-      mime: item.file.type || "application/octet-stream",
+      mime: resolved.mime,
       bytes: item.file.size,
       contentHash,
       capturedAt: item.file.lastModified
@@ -81,7 +91,7 @@ export async function uploadDaily(
 
     update({ phase: "uploading", mediaId: begin.mediaId });
     try {
-      await putWithProgress(begin.uploadUrl, item.file, (progress) =>
+      await putWithProgress(begin.uploadUrl, item.file, resolved.mime, (progress) =>
         update({ progress }),
       );
       update({ phase: "finishing", progress: 1 });

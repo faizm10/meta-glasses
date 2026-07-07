@@ -12,21 +12,14 @@ import {
   setMediaStatus,
 } from "@auteur/db";
 
+import { resolveMedia } from "@auteur/contracts";
+
 import { pipelineConfigured, submitIngest } from "../pipeline";
 
 import { deleteObject, headObjectBytes, presignUpload, r2Configured } from "../r2";
 import { protectedProcedure, router } from "../trpc";
 
 const MAX_BYTES = 4.9 * 1024 * 1024 * 1024; // R2 single-PUT ceiling
-
-const kindFromMime = (mime: string): "video" | "photo" | "audio" | null =>
-  mime.startsWith("video/")
-    ? "video"
-    : mime.startsWith("image/")
-      ? "photo"
-      : mime.startsWith("audio/")
-        ? "audio"
-        : null;
 
 export const mediaRouter = router({
   /**
@@ -50,13 +43,16 @@ export const mediaRouter = router({
           message: "The archive isn't connected yet — add R2 keys to .env.local.",
         });
       }
-      const kind = kindFromMime(input.mime);
-      if (!kind) {
+      // Same resolution the client ran — extension rescues footage the
+      // browser reports with an empty or useless MIME (.mov, notably).
+      const resolved = resolveMedia(input.fileName, input.mime);
+      if (!resolved) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Only video, photo, and audio dailies can develop here.",
         });
       }
+      const { kind, mime } = resolved;
 
       const existing = await findMediaByHash(ctx.user.id, input.contentHash);
       if (existing) {
@@ -74,13 +70,13 @@ export const mediaRouter = router({
         userId: ctx.user.id,
         kind,
         fileName: input.fileName,
-        mime: input.mime,
+        mime,
         bytes: input.bytes,
         contentHash: input.contentHash,
         capturedAt: input.capturedAt ? new Date(input.capturedAt) : null,
         originalKey: key,
       });
-      const uploadUrl = await presignUpload(key, input.mime);
+      const uploadUrl = await presignUpload(key, mime);
 
       return { duplicate: false as const, mediaId: row.id, uploadUrl };
     }),
