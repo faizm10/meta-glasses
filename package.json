@@ -6,6 +6,8 @@
     "node": ">=20.9.0"
   },
   "scripts": {
+    "go": "bash scripts/dev.sh",
+    "pipeline:deploy": "bash scripts/deploy-pipeline.sh",
     "dev": "turbo dev",
     "build": "turbo build",
     "typecheck": "turbo typecheck",
