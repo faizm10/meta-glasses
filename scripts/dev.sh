@@ -85,4 +85,8 @@ if [[ "${1:-}" != "--skip" ]]; then
 fi
 
 say "▸ marquee: http://localhost:3000"
+# localhost cookies are shared across every project on this machine, and
+# Clerk dev sessions are large — Node's default 16KB header cap causes
+# HTTP 431. 64KB absorbs a crowded localhost cookie jar.
+export NODE_OPTIONS="${NODE_OPTIONS:-} --max-http-header-size=65536"
 exec pnpm --dir "$ROOT" --filter @auteur/web dev
