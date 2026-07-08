@@ -7,7 +7,12 @@ import {
   setMediaStatus,
   type Media,
 } from "@auteur/db";
-import { embedResultSchema, ingestResultSchema, type IngestJob } from "@auteur/contracts";
+import {
+  embedResultSchema,
+  ingestResultSchema,
+  type IngestJob,
+  type RenderJob,
+} from "@auteur/contracts";
 
 /**
  * Control-plane side of the media plane (apps/pipeline/app.py).
@@ -37,6 +42,17 @@ async function call(url: string, body: object): Promise<unknown> {
   return res.json();
 }
 
+async function submitTask(task: "ingest" | "render", job: unknown): Promise<string> {
+  const out = (await call(process.env.PIPELINE_SUBMIT_URL!, { task, job })) as {
+    status: string;
+    call_id?: string;
+  };
+  if (out.status !== "spawned" || !out.call_id) {
+    throw new Error(`pipeline submit failed: ${out.status}`);
+  }
+  return out.call_id;
+}
+
 /** Spawns ingest for a freshly uploaded daily. Returns the Modal call id. */
 export async function submitIngest(m: Media): Promise<string> {
   const job: IngestJob = {
@@ -47,14 +63,22 @@ export async function submitIngest(m: Media): Promise<string> {
     poster_key: `posters/${m.userId}/${m.id}/frame.jpg`,
     scene_prefix: `scenes/${m.userId}/${m.id}`,
   };
-  const out = (await call(process.env.PIPELINE_SUBMIT_URL!, { job })) as {
+  return submitTask("ingest", job);
+}
+
+export async function submitRender(job: RenderJob): Promise<string> {
+  return submitTask("render", job);
+}
+
+/** Poll a spawned task once. Shared by media and films refreshers. */
+export async function pollResult(
+  callId: string,
+): Promise<{ status: string; result?: unknown; error?: string }> {
+  return (await call(process.env.PIPELINE_RESULT_URL!, { call_id: callId })) as {
     status: string;
-    call_id?: string;
+    result?: unknown;
+    error?: string;
   };
-  if (out.status !== "spawned" || !out.call_id) {
-    throw new Error(`pipeline submit failed: ${out.status}`);
-  }
-  return out.call_id;
 }
 
 /** Ask's query embedding — CLIP text tower on the media plane. */
@@ -77,9 +101,7 @@ export async function refreshProcessingMedia(userId: string): Promise<void> {
     processing.map(async (m) => {
       if (!m.pipelineRef) return;
       try {
-        const out = (await call(process.env.PIPELINE_RESULT_URL!, {
-          call_id: m.pipelineRef,
-        })) as { status: string; result?: unknown; error?: string };
+        const out = await pollResult(m.pipelineRef);
 
         if (out.status === "done") {
           const r = ingestResultSchema.parse(out.result);

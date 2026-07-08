@@ -56,6 +56,32 @@ export const embedResultSchema = z.object({
   embedding: z.array(z.number()).length(EMBEDDING_DIM),
 });
 
+/** Render stage — assembles a film from proxy segments. */
+export const renderJobSchema = z.object({
+  film_id: z.string(),
+  output_key: z.string(),
+  title: z.string(),
+  credit: z.string(),
+  clips: z
+    .array(
+      z.object({
+        proxy_key: z.string(),
+        in_ms: z.number().int().min(0),
+        out_ms: z.number().int().min(0),
+      }),
+    )
+    .min(1),
+});
+
+export const renderResultSchema = z.object({
+  ok: z.literal(true),
+  film_id: z.string(),
+  film_key: z.string(),
+  duration_ms: z.number().int(),
+});
+
 export type IngestJob = z.infer<typeof ingestJobSchema>;
 export type IngestResult = z.infer<typeof ingestResultSchema>;
 export type DetectedScene = z.infer<typeof detectedSceneSchema>;
+export type RenderJob = z.infer<typeof renderJobSchema>;
+export type RenderResult = z.infer<typeof renderResultSchema>;

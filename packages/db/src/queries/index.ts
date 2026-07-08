@@ -5,3 +5,4 @@
 export * from "./users";
 export * from "./media";
 export * from "./scenes";
+export * from "./films";

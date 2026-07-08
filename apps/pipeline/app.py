@@ -47,7 +47,7 @@ def _download_models():
 
 image = (
     modal.Image.debian_slim(python_version="3.12")
-    .apt_install("ffmpeg")
+    .apt_install("ffmpeg", "fonts-dejavu-core")
     .pip_install(
         "boto3~=1.34",
         "fastapi[standard]~=0.115",
@@ -303,6 +303,119 @@ def ingest_media(job: dict) -> dict:
     return {"ok": True, "media_id": job["media_id"], **probe, **produced}
 
 
+SERIF = "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"
+SANS = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+CANVAS = "1280x720"
+FPS = 24
+
+
+def _drawtext_escape(text: str) -> str:
+    return text.replace("\\", "").replace("'", "’").replace(":", "\\:").replace("%", "")
+
+
+def _card(tmp: str, name: str, seconds: float, lines: list[tuple[str, str, int]]) -> str:
+    """A silent title/credit card: black canvas, centered stacked text
+    lines (text, font, size), gentle fade in and out."""
+    out = os.path.join(tmp, name)
+    draws = []
+    n = len(lines)
+    for i, (text, font, size) in enumerate(lines):
+        y = f"(h-text_h)/2+{(i - (n - 1) / 2):.1f}*{int(size * 2.2)}"
+        draws.append(
+            f"drawtext=fontfile={font}:text='{_drawtext_escape(text)}'"
+            f":fontsize={size}:fontcolor=0xF2EFE9:x=(w-text_w)/2:y={y}"
+        )
+    fade = f"fade=t=in:st=0:d=0.7,fade=t=out:st={seconds - 0.7:.2f}:d=0.7"
+    vf = ",".join(draws + [fade])
+    subprocess.run(
+        ["ffmpeg", "-v", "error",
+         "-f", "lavfi", "-i", f"color=c=0x0B0B0C:duration={seconds}:size={CANVAS}:rate={FPS}",
+         "-f", "lavfi", "-i", f"anullsrc=r=48000:cl=stereo:duration={seconds}",
+         "-vf", vf, "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",
+         "-c:a", "aac", "-b:a", "128k", "-shortest", "-y", out],
+        check=True,
+    )
+    return out
+
+
+def _segment(tmp: str, i: int, src: str, in_ms: int, out_ms: int) -> str:
+    """One clip of the cut, normalized to the film canvas. Sources
+    without audio get silence so concat stays uniform."""
+    out = os.path.join(tmp, f"seg{i}.mp4")
+    dur = max(0.2, (out_ms - in_ms) / 1000)
+    has_audio = bool(
+        subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries",
+             "stream=codec_type", "-of", "csv=p=0", src],
+            capture_output=True, text=True,
+        ).stdout.strip()
+    )
+    vf = (
+        f"scale={CANVAS.split('x')[0]}:{CANVAS.split('x')[1]}:force_original_aspect_ratio=decrease,"
+        f"pad={CANVAS.split('x')[0]}:{CANVAS.split('x')[1]}:(ow-iw)/2:(oh-ih)/2:color=0x0B0B0C,"
+        f"fps={FPS},setsar=1"
+    )
+    cmd = ["ffmpeg", "-v", "error", "-ss", f"{in_ms / 1000:.3f}", "-t", f"{dur:.3f}", "-i", src]
+    if not has_audio:
+        cmd += ["-f", "lavfi", "-t", f"{dur:.3f}", "-i", "anullsrc=r=48000:cl=stereo"]
+    cmd += ["-map", "0:v:0", "-map", "0:a:0" if has_audio else "1:a:0",
+            "-vf", vf, "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",
+            "-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-ac", "2", "-y", out]
+    subprocess.run(cmd, check=True)
+    return out
+
+
+@app.function(image=image, secrets=[secret], cpu=8.0, memory=8192, timeout=1800)
+def render_film(job: dict) -> dict:
+    """EDL clips -> title card + segments + credits -> one film in R2."""
+    r2 = _r2()
+    bucket = os.environ["R2_BUCKET"]
+
+    with tempfile.TemporaryDirectory() as tmp:
+        proxies: dict[str, str] = {}
+        for clip in job["clips"]:
+            key = clip["proxy_key"]
+            if key not in proxies:
+                local = os.path.join(tmp, f"src{len(proxies)}.mp4")
+                r2.download_file(bucket, key, local)
+                proxies[key] = local
+
+        parts = [
+            _card(tmp, "title.mp4", 3.0, [
+                (job["title"], SERIF, 56),
+                (job["credit"].lower(), SANS, 16),
+            ])
+        ]
+        for i, clip in enumerate(job["clips"]):
+            parts.append(_segment(tmp, i, proxies[clip["proxy_key"]], clip["in_ms"], clip["out_ms"]))
+        parts.append(
+            _card(tmp, "credits.mp4", 2.5, [
+                (job["credit"].lower(), SERIF, 30),
+                ("edited with auteur", SANS, 14),
+            ])
+        )
+
+        listfile = os.path.join(tmp, "list.txt")
+        with open(listfile, "w") as f:
+            f.writelines(f"file '{p}'\n" for p in parts)
+        out = os.path.join(tmp, "film.mp4")
+        subprocess.run(
+            ["ffmpeg", "-v", "error", "-f", "concat", "-safe", "0", "-i", listfile,
+             "-c", "copy", "-movflags", "+faststart", "-y", out],
+            check=True,
+        )
+        duration_ms = int(float(json.loads(subprocess.run(
+            ["ffprobe", "-v", "error", "-print_format", "json", "-show_format", out],
+            capture_output=True, text=True, check=True,
+        ).stdout)["format"]["duration"]) * 1000)
+
+        r2.upload_file(out, bucket, job["output_key"],
+                       ExtraArgs={"ContentType": "video/mp4"})
+
+    return {"ok": True, "film_id": job["film_id"],
+            "film_key": job["output_key"], "duration_ms": duration_ms}
+
+
 @app.function(image=image, secrets=[secret])
 def make_fixture(key: str) -> dict:
     """Self-test asset: 8s two-scene synthetic clip with a tone, straight
@@ -348,7 +461,11 @@ def _authed(body: dict) -> bool:
 def submit(body: dict):
     if not _authed(body):
         return {"status": "unauthorized"}
-    call = ingest_media.spawn(body["job"])
+    task = body.get("task", "ingest")
+    fn = {"ingest": ingest_media, "render": render_film}.get(task)
+    if fn is None:
+        return {"status": "unknown_task"}
+    call = fn.spawn(body["job"])
     return {"status": "spawned", "call_id": call.object_id}
 
 

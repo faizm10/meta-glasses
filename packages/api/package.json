@@ -15,6 +15,7 @@
     "@aws-sdk/client-s3": "^3",
     "@aws-sdk/s3-request-presigner": "^3",
     "@trpc/server": "^11",
+    "ai": "^7.0.17",
     "zod": "^4"
   },
   "devDependencies": {

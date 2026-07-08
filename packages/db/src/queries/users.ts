@@ -23,6 +23,13 @@ export async function upsertUserFromClerk(
   return user;
 }
 
+export async function getTasteSlugs(userId: string): Promise<string[] | null> {
+  const row = await db().query.tasteProfiles.findFirst({
+    where: eq(tasteProfiles.userId, userId),
+  });
+  return row?.pickedStills ?? null;
+}
+
 /** Saves the taste picks and marks onboarding complete in one call. */
 export async function completeUserOnboarding(
   userId: string,
