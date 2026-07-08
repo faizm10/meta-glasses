@@ -2,10 +2,12 @@ import {
   applyIngestResult,
   listProcessingMedia,
   markProcessing,
+  replaceScenesForMedia,
+  replaceTranscriptForMedia,
   setMediaStatus,
   type Media,
 } from "@auteur/db";
-import { ingestResultSchema, type IngestJob } from "@auteur/contracts";
+import { embedResultSchema, ingestResultSchema, type IngestJob } from "@auteur/contracts";
 
 /**
  * Control-plane side of the media plane (apps/pipeline/app.py).
@@ -43,6 +45,7 @@ export async function submitIngest(m: Media): Promise<string> {
     original_key: m.originalKey,
     proxy_key: `proxies/${m.userId}/${m.id}/720.mp4`,
     poster_key: `posters/${m.userId}/${m.id}/frame.jpg`,
+    scene_prefix: `scenes/${m.userId}/${m.id}`,
   };
   const out = (await call(process.env.PIPELINE_SUBMIT_URL!, { job })) as {
     status: string;
@@ -52,6 +55,14 @@ export async function submitIngest(m: Media): Promise<string> {
     throw new Error(`pipeline submit failed: ${out.status}`);
   }
   return out.call_id;
+}
+
+/** Ask's query embedding — CLIP text tower on the media plane. */
+export async function embedText(text: string): Promise<number[]> {
+  const url = process.env.PIPELINE_EMBED_URL;
+  if (!url) throw new Error("PIPELINE_EMBED_URL is not set");
+  const out = embedResultSchema.parse(await call(url, { text }));
+  return out.embedding;
 }
 
 /**
@@ -72,6 +83,24 @@ export async function refreshProcessingMedia(userId: string): Promise<void> {
 
         if (out.status === "done") {
           const r = ingestResultSchema.parse(out.result);
+          await replaceScenesForMedia(
+            m.id,
+            r.scenes.map((s) => ({
+              idx: s.idx,
+              startMs: s.start_ms,
+              endMs: s.end_ms,
+              frameKey: s.frame_key,
+              embedding: s.embedding,
+            })),
+          );
+          await replaceTranscriptForMedia(
+            m.id,
+            r.transcript.map((t) => ({
+              startMs: t.start_ms,
+              endMs: t.end_ms,
+              text: t.text,
+            })),
+          );
           await applyIngestResult(userId, m.id, {
             durationMs: r.duration_ms,
             width: r.width,

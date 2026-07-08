@@ -24,6 +24,12 @@ export default async function Marquee() {
         <span className="timecode text-xs text-bone/40">auteur</span>
         <div className="flex items-center gap-4">
           <Link
+            href="/ask"
+            className="timecode text-xs text-bone/40 transition-colors hover:text-bone"
+          >
+            ask
+          </Link>
+          <Link
             href="/library"
             className="timecode text-xs text-bone/40 transition-colors hover:text-bone"
           >

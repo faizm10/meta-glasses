@@ -6,6 +6,7 @@ import {
   findMediaByHash,
   findMediaForUser,
   listRecentMedia,
+  listSceneFrameKeys,
   markProcessing,
   newId,
   registerUpload,
@@ -137,11 +138,16 @@ export const mediaRouter = router({
       const row = await findMediaForUser(ctx.user.id, input.mediaId);
       if (!row) throw new TRPCError({ code: "NOT_FOUND" });
 
-      const keys = [row.originalKey, row.proxyKey, row.posterKey, row.spriteKey].filter(
-        (k): k is string => Boolean(k),
-      );
+      const frameKeys = await listSceneFrameKeys(row.id);
+      const keys = [
+        row.originalKey,
+        row.proxyKey,
+        row.posterKey,
+        row.spriteKey,
+        ...frameKeys,
+      ].filter((k): k is string => Boolean(k));
       await Promise.all(keys.map((k) => deleteObject(k)));
-      await deleteMediaRow(ctx.user.id, row.id);
+      await deleteMediaRow(ctx.user.id, row.id); // scenes/transcripts cascade
       return { ok: true as const };
     }),
 });
